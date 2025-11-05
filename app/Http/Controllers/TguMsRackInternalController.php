@@ -17,6 +17,118 @@ class TguMsRackInternalController extends Controller
      */
     public function index(Request $request): View|JsonResponse
     {
+        // Handle DataTables server-side processing
+        if ($request->ajax()) {
+            return $this->getDataTablesData($request);
+        }
+
+        // Handle API requests
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return $this->getApiData($request);
+        }
+
+        // Return web view
+        $gudangs = TguMsGudang::active()->get();
+        $businesses = TguMsProductBusiness::select('Business')->distinct()->get();
+        $rackTypes = TguMsRackInternal::getRackTypes();
+
+        return view('rack-internal.index', compact('gudangs', 'businesses', 'rackTypes'));
+    }
+
+    /**
+     * Get DataTables data with server-side processing
+     */
+    private function getDataTablesData(Request $request): JsonResponse
+    {
+        try {
+            $query = TguMsRackInternal::with(['gudang', 'productBusiness'])->active();
+
+            // Apply filters
+            if ($request->filled('business')) {
+                $query->byBusiness($request->business);
+            }
+
+            if ($request->filled('branch')) {
+                $query->byBranch($request->branch);
+            }
+
+            if ($request->filled('type')) {
+                $query->byType($request->type);
+            }
+
+            // Handle search
+            if ($request->filled('search') && isset($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where(function($q) use ($search) {
+                    $q->where('rack_internal_code', 'like', "%{$search}%")
+                      ->orWhere('rack_principal_code', 'like', "%{$search}%")
+                      ->orWhere('rack_business', 'like', "%{$search}%")
+                      ->orWhere('rack_branch', 'like', "%{$search}%");
+                });
+            }
+
+            // Get total records
+            $totalRecords = TguMsRackInternal::active()->count();
+            $filteredRecords = $query->count();
+
+            // Handle ordering
+            if ($request->filled('order')) {
+                $columns = ['rack_internal_code', 'rack_principal_code', 'rack_business', 'rack_branch', 'rack_type', 'rack_active', 'rack_locked', 'rec_datecreated'];
+                $orderColumn = $columns[$request->order[0]['column']] ?? 'rack_internal_code';
+                $orderDirection = $request->order[0]['dir'] ?? 'asc';
+                $query->orderBy($orderColumn, $orderDirection);
+            } else {
+                $query->orderBy('rack_internal_code');
+            }
+
+            // Handle pagination
+            if ($request->filled('start') && $request->filled('length')) {
+                $query->skip($request->start)->take($request->length);
+            }
+
+            $racks = $query->get();
+
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $racks->map(function($rack) {
+                    return [
+                        'rack_internal_code' => $rack->rack_internal_code,
+                        'rack_principal_code' => $rack->rack_principal_code,
+                        'rack_business' => $rack->rack_business,
+                        'rack_branch' => $rack->rack_branch,
+                        'rack_type' => $rack->rack_type,
+                        'rack_type_name' => $rack->rack_type_name,
+                        'rack_active' => $rack->rack_active,
+                        'rack_locked' => $rack->rack_locked,
+                        'is_active' => $rack->is_active,
+                        'is_locked' => $rack->is_locked,
+                        'rec_datecreated' => $rack->rec_datecreated,
+                        'actions' => [
+                            'code' => $rack->rack_internal_code,
+                            'branch' => $rack->rack_branch
+                        ]
+                    ];
+                })
+            ]);
+
+        } catch (QueryException $e) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Database error: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get API data for non-DataTables requests
+     */
+    private function getApiData(Request $request): JsonResponse
+    {
         try {
             $query = TguMsRackInternal::with(['gudang', 'productBusiness'])
                 ->active()
@@ -45,48 +157,35 @@ class TguMsRackInternalController extends Controller
                 });
             }
 
-            if ($request->expectsJson()) {
-                $racks = $query->get();
-                return response()->json([
-                    'success' => true,
-                    'data' => $racks->map(function($rack) {
-                        return [
-                            'rack_internal_code' => $rack->rack_internal_code,
-                            'rack_principal_code' => $rack->rack_principal_code,
-                            'rack_business' => $rack->rack_business,
-                            'rack_branch' => $rack->rack_branch,
-                            'rack_type' => $rack->rack_type,
-                            'rack_type_name' => $rack->rack_type_name,
-                            'rack_active' => $rack->rack_active,
-                            'rack_locked' => $rack->rack_locked,
-                            'is_active' => $rack->is_active,
-                            'is_locked' => $rack->is_locked,
-                            'full_rack_code' => $rack->full_rack_code,
-                            'gudang' => $rack->gudang,
-                            'product_business' => $rack->productBusiness,
-                            'rec_datecreated' => $rack->rec_datecreated,
-                            'rec_dateupdate' => $rack->rec_dateupdate,
-                        ];
-                    })
-                ]);
-            }
-
-            $racks = $query->paginate(50);
-            $gudangs = TguMsGudang::active()->get();
-            $businesses = TguMsProductBusiness::select('Business')->distinct()->get();
-            $rackTypes = TguMsRackInternal::getRackTypes();
-
-            return view('rack-internal.index', compact('racks', 'gudangs', 'businesses', 'rackTypes'));
+            $racks = $query->get();
+            return response()->json([
+                'success' => true,
+                'data' => $racks->map(function($rack) {
+                    return [
+                        'rack_internal_code' => $rack->rack_internal_code,
+                        'rack_principal_code' => $rack->rack_principal_code,
+                        'rack_business' => $rack->rack_business,
+                        'rack_branch' => $rack->rack_branch,
+                        'rack_type' => $rack->rack_type,
+                        'rack_type_name' => $rack->rack_type_name,
+                        'rack_active' => $rack->rack_active,
+                        'rack_locked' => $rack->rack_locked,
+                        'is_active' => $rack->is_active,
+                        'is_locked' => $rack->is_locked,
+                        'full_rack_code' => $rack->full_rack_code,
+                        'gudang' => $rack->gudang,
+                        'product_business' => $rack->productBusiness,
+                        'rec_datecreated' => $rack->rec_datecreated,
+                        'rec_dateupdate' => $rack->rec_dateupdate,
+                    ];
+                })
+            ]);
 
         } catch (QueryException $e) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Database error: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return back()->withErrors(['error' => 'Database connection error. Please try again.']);
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error: ' . $e->getMessage()
+            ], 500);
         }
     }
 

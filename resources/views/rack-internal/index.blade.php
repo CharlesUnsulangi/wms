@@ -357,9 +357,9 @@ $(document).ready(function() {
         
         table = $('#rackTable').DataTable({
             processing: true,
-            serverSide: false,
+            serverSide: true,
             ajax: {
-                url: '/api/rack-internal',
+                url: '{{ route("rack-internal.index") }}',
                 data: function(d) {
                     d.business = $('#businessFilter').val();
                     d.branch = $('#branchFilter').val();

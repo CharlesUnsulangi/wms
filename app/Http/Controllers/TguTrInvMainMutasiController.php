@@ -14,8 +14,13 @@ class TguTrInvMainMutasiController extends Controller
     /**
      * Display a listing of the resource for web view.
      */
-    public function index()
+    public function index(Request $request)
     {
+        // Handle DataTables server-side processing
+        if ($request->ajax()) {
+            return $this->getDataTablesData($request);
+        }
+        
         // Check if request is API
         if (request()->expectsJson() || request()->is('api/*')) {
             return $this->apiIndex();
@@ -23,6 +28,90 @@ class TguTrInvMainMutasiController extends Controller
         
         // Return web view
         return view('inventory.index');
+    }
+    
+    /**
+     * Get DataTables data with server-side processing for Inventory
+     */
+    private function getDataTablesData(Request $request): JsonResponse
+    {
+        try {
+            $query = TguTrInvMainMutasi::with(['productBusiness', 'warehouse'])->active();
+            
+            // Apply filters
+            if ($request->filled('warehouse')) {
+                $query->forWarehouse($request->warehouse);
+            }
+            
+            if ($request->filled('product')) {
+                $query->forProduct($request->product);
+            }
+            
+            if ($request->filled('transaction_type')) {
+                $query->where('main_type_transaksi', $request->transaction_type);
+            }
+            
+            // Handle search
+            if ($request->filled('search') && isset($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where(function($q) use ($search) {
+                    $q->where('tr_main_code', 'like', "%{$search}%")
+                      ->orWhere('main_ms_sku_business', 'like', "%{$search}%")
+                      ->orWhere('main_type_transaksi', 'like', "%{$search}%")
+                      ->orWhere('main_gudang_asal', 'like', "%{$search}%")
+                      ->orWhere('main_gudang_tujuan', 'like', "%{$search}%");
+                });
+            }
+            
+            // Get total records
+            $totalRecords = TguTrInvMainMutasi::active()->count();
+            $filteredRecords = $query->count();
+            
+            // Handle ordering
+            if ($request->filled('order')) {
+                $columns = ['tr_main_code', 'main_ms_sku_business', 'main_type_transaksi', 'main_qty', 'main_gudang_asal', 'main_gudang_tujuan', 'rec_datecreated'];
+                $orderColumn = $columns[$request->order[0]['column']] ?? 'rec_datecreated';
+                $orderDirection = $request->order[0]['dir'] ?? 'desc';
+                $query->orderBy($orderColumn, $orderDirection);
+            } else {
+                $query->orderBy('rec_datecreated', 'desc');
+            }
+            
+            // Handle pagination
+            if ($request->filled('start') && $request->filled('length')) {
+                $query->skip($request->start)->take($request->length);
+            }
+            
+            $inventories = $query->get();
+            
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $inventories->map(function($inventory) {
+                    return [
+                        'tr_main_code' => $inventory->tr_main_code,
+                        'main_ms_sku_business' => $inventory->main_ms_sku_business,
+                        'main_type_transaksi' => $inventory->main_type_transaksi,
+                        'main_qty' => $inventory->main_qty,
+                        'main_gudang_asal' => $inventory->main_gudang_asal,
+                        'main_gudang_tujuan' => $inventory->main_gudang_tujuan,
+                        'rec_datecreated' => $inventory->rec_datecreated,
+                        'product_description' => $inventory->productBusiness->SKU_description ?? '-',
+                        'actions' => $inventory->tr_main_code
+                    ];
+                })
+            ]);
+            
+        } catch (QueryException $e) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Database error: ' . $e->getMessage()
+            ]);
+        }
     }
     
     /**
