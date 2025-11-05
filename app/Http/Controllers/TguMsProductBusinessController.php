@@ -9,17 +9,106 @@ use Illuminate\Http\JsonResponse;
 class TguMsProductBusinessController extends Controller
 {
     /**
-     * Display a listing of the resource for web view.
+     * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): View|JsonResponse
     {
-        // Check if request is API
-        if (request()->expectsJson() || request()->is('api/*')) {
-            return $this->apiIndex();
+        // Handle DataTables server-side processing
+        if ($request->ajax()) {
+            return $this->getDataTablesData($request);
         }
         
         // Return web view
         return view('product-business.index');
+    }
+    
+    /**
+     * Get DataTables data with server-side processing
+     */
+    private function getDataTablesData(Request $request): JsonResponse
+    {
+        try {
+            $query = TguMsProductBusiness::where('rec_status', 'A');
+            
+            // Apply filters
+            if ($request->filled('business')) {
+                $query->where('Business', $request->business);
+            }
+            
+            if ($request->filled('category')) {
+                $query->where('SKU_category', 'like', "%{$request->category}%");
+            }
+            
+            if ($request->filled('status')) {
+                $query->where('SKU_Status_Product', $request->status);
+            }
+            
+            // Handle search
+            if ($request->filled('search') && isset($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where(function($q) use ($search) {
+                    $q->where('SKU_Business', 'like', "%{$search}%")
+                      ->orWhere('SKU_description', 'like', "%{$search}%")
+                      ->orWhere('SKU_brandcode', 'like', "%{$search}%")
+                      ->orWhere('Business', 'like', "%{$search}%")
+                      ->orWhere('SKU_category', 'like', "%{$search}%");
+                });
+            }
+            
+            // Get total records before filtering
+            $totalRecords = TguMsProductBusiness::where('rec_status', 'A')->count();
+            
+            // Get filtered count
+            $filteredRecords = $query->count();
+            
+            // Handle ordering
+            if ($request->filled('order')) {
+                $columns = ['SKU_Business', 'Business', 'SKU_description', 'SKU_brandcode', 'SKU_category', 'SKU_Hargajual_pcs', 'SKU_Hargabeli_pcs', 'SKU_Status_Product'];
+                $orderColumn = $columns[$request->order[0]['column']] ?? 'SKU_Business';
+                $orderDirection = $request->order[0]['dir'] ?? 'asc';
+                $query->orderBy($orderColumn, $orderDirection);
+            } else {
+                $query->orderBy('SKU_Business');
+            }
+            
+            // Handle pagination
+            if ($request->filled('start') && $request->filled('length')) {
+                $query->skip($request->start)->take($request->length);
+            }
+            
+            $products = $query->get();
+            
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $products->map(function($product) {
+                    return [
+                        'SKU_Business' => $product->SKU_Business,
+                        'Business' => $product->Business,
+                        'SKU_description' => $product->SKU_description ?? '-',
+                        'SKU_brandcode' => $product->SKU_brandcode ?? '-',
+                        'SKU_category' => $product->SKU_category ?? '-',
+                        'SKU_Hargajual_pcs' => $product->SKU_Hargajual_pcs,
+                        'SKU_Hargabeli_pcs' => $product->SKU_Hargabeli_pcs,
+                        'SKU_Status_Product' => $product->SKU_Status_Product,
+                        'actions' => [
+                            'sku' => $product->SKU_Business,
+                            'business' => $product->Business
+                        ]
+                    ];
+                })
+            ]);
+            
+        } catch (QueryException $e) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Database error: ' . $e->getMessage()
+            ]);
+        }
     }
     
     /**

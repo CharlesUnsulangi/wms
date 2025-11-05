@@ -118,51 +118,88 @@ $(document).ready(function() {
 
     // Initialize DataTable
     const table = $('#gudangTable').DataTable({
+        processing: true,
+        serverSide: true,
         ajax: {
-            url: '/api/wms/gudang',
-            dataSrc: function(json) {
-                return json.data || [];
+            url: '{{ route("gudang.index") }}',
+            data: function(d) {
+                d.business = $('#businessFilter').val();
             }
         },
         columns: [
-            { data: 'Gudang_code' },
-            { data: 'Gudang_desc' },
-            { data: 'Gudang_business' },
             { 
-                data: 'rec_status',
+                data: 'Gudang_code',
+                name: 'Gudang_code',
+                orderable: true,
+                searchable: true
+            },
+            { 
+                data: 'Gudang_name',
+                name: 'Gudang_name',
+                orderable: true,
+                searchable: true
+            },
+            { 
+                data: 'Business',
+                name: 'Business',
+                orderable: true,
+                searchable: true
+            },
+            { 
+                data: 'Gudang_address',
+                name: 'Gudang_address',
+                orderable: true,
+                searchable: true,
+                render: function(data) {
+                    return data || '-';
+                }
+            },
+            { 
+                data: 'Gudang_status',
+                name: 'Gudang_status',
+                orderable: true,
+                searchable: true,
                 render: function(data) {
                     return data === 'A' ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>';
                 }
             },
-            { 
-                data: 'rec_datecreated',
-                render: function(data) {
-                    return data ? new Date(data).toLocaleDateString('id-ID') : '-';
-                }
-            },
-            { 
-                data: 'rec_dateupdate',
-                render: function(data) {
-                    return data && data !== '1900-01-01T00:00:00.000Z' ? new Date(data).toLocaleDateString('id-ID') : '-';
-                }
-            },
             {
-                data: null,
+                data: 'actions',
+                name: 'actions',
+                orderable: false,
+                searchable: false,
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editGudang('${row.Gudang_code}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGudang('${row.Gudang_code}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editGudang('${data}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGudang('${data}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     `;
                 }
             }
         ],
         responsive: true,
+        order: [[0, 'asc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/id.json'
+            processing: "Memuat data...",
+            lengthMenu: "Tampilkan _MENU_ data per halaman",
+            zeroRecords: "Data tidak ditemukan",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            infoFiltered: "(difilter dari _MAX_ total data)",
+            search: "Cari:",
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Selanjutnya",
+                previous: "Sebelumnya"
+            }
         }
     });
 

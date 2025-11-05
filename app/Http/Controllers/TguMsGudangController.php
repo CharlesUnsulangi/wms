@@ -9,10 +9,15 @@ use Illuminate\Http\JsonResponse;
 class TguMsGudangController extends Controller
 {
     /**
-     * Display a listing of the resource for web view.
+     * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request): View|JsonResponse
     {
+        // Handle DataTables server-side processing
+        if ($request->ajax()) {
+            return $this->getDataTablesData($request);
+        }
+        
         // Check if request is API
         if (request()->expectsJson() || request()->is('api/*')) {
             return $this->apiIndex();
@@ -20,6 +25,78 @@ class TguMsGudangController extends Controller
         
         // Return web view
         return view('gudang.index');
+    }
+    
+    /**
+     * Get DataTables data with server-side processing
+     */
+    private function getDataTablesData(Request $request): JsonResponse
+    {
+        try {
+            $query = TguMsGudang::where('rec_status', 'A');
+            
+            // Apply filters
+            if ($request->filled('business')) {
+                $query->where('Business', $request->business);
+            }
+            
+            // Handle search
+            if ($request->filled('search') && isset($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where(function($q) use ($search) {
+                    $q->where('Gudang_code', 'like', "%{$search}%")
+                      ->orWhere('Gudang_name', 'like', "%{$search}%")
+                      ->orWhere('Business', 'like', "%{$search}%")
+                      ->orWhere('Gudang_address', 'like', "%{$search}%");
+                });
+            }
+            
+            // Get total records
+            $totalRecords = TguMsGudang::where('rec_status', 'A')->count();
+            $filteredRecords = $query->count();
+            
+            // Handle ordering
+            if ($request->filled('order')) {
+                $columns = ['Gudang_code', 'Gudang_name', 'Business', 'Gudang_address', 'Gudang_status'];
+                $orderColumn = $columns[$request->order[0]['column']] ?? 'Gudang_code';
+                $orderDirection = $request->order[0]['dir'] ?? 'asc';
+                $query->orderBy($orderColumn, $orderDirection);
+            } else {
+                $query->orderBy('Gudang_code');
+            }
+            
+            // Handle pagination
+            if ($request->filled('start') && $request->filled('length')) {
+                $query->skip($request->start)->take($request->length);
+            }
+            
+            $gudangs = $query->get();
+            
+            return response()->json([
+                'draw' => intval($request->draw),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $gudangs->map(function($gudang) {
+                    return [
+                        'Gudang_code' => $gudang->Gudang_code,
+                        'Gudang_name' => $gudang->Gudang_name,
+                        'Business' => $gudang->Business,
+                        'Gudang_address' => $gudang->Gudang_address ?? '-',
+                        'Gudang_status' => $gudang->Gudang_status,
+                        'actions' => $gudang->Gudang_code
+                    ];
+                })
+            ]);
+            
+        } catch (QueryException $e) {
+            return response()->json([
+                'draw' => intval($request->draw ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Database error: ' . $e->getMessage()
+            ]);
+        }
     }
     
     /**

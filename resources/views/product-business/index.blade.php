@@ -265,49 +265,81 @@ $(document).ready(function() {
         }
     });
 
-    // Initialize DataTable
+    // Initialize DataTable with server-side processing
     const table = $('#productTable').DataTable({
+        processing: true,
+        serverSide: true,
         ajax: {
-            url: '/api/wms/product-business',
-            dataSrc: function(json) {
-                return json.data || [];
+            url: '{{ route("product-business.index") }}',
+            data: function(d) {
+                d.business = $('#businessFilter').val();
+                d.category = $('#categoryFilter').val();
+                d.status = $('#statusFilter').val();
             }
         },
         columns: [
-            { data: 'SKU_Business' },
-            { data: 'Business' },
+            { 
+                data: 'SKU_Business',
+                name: 'SKU_Business',
+                orderable: true,
+                searchable: true
+            },
+            { 
+                data: 'Business',
+                name: 'Business',
+                orderable: true,
+                searchable: true
+            },
             { 
                 data: 'SKU_description',
+                name: 'SKU_description',
+                orderable: true,
+                searchable: true,
                 render: function(data) {
                     return data || '-';
                 }
             },
             { 
                 data: 'SKU_brandcode',
+                name: 'SKU_brandcode',
+                orderable: true,
+                searchable: true,
                 render: function(data) {
                     return data || '-';
                 }
             },
             { 
                 data: 'SKU_category',
+                name: 'SKU_category',
+                orderable: true,
+                searchable: true,
                 render: function(data) {
                     return data || '-';
                 }
             },
             { 
                 data: 'SKU_Hargajual_pcs',
+                name: 'SKU_Hargajual_pcs',
+                orderable: true,
+                searchable: false,
                 render: function(data) {
                     return data ? 'Rp ' + parseFloat(data).toLocaleString('id-ID') : '-';
                 }
             },
             { 
                 data: 'SKU_Hargabeli_pcs',
+                name: 'SKU_Hargabeli_pcs',
+                orderable: true,
+                searchable: false,
                 render: function(data) {
                     return data ? 'Rp ' + parseFloat(data).toLocaleString('id-ID') : '-';
                 }
             },
             { 
                 data: 'SKU_Status_Product',
+                name: 'SKU_Status_Product',
+                orderable: true,
+                searchable: true,
                 render: function(data) {
                     if (data === 'ACTIVE') {
                         return '<span class="badge bg-success">Active</span>';
@@ -318,24 +350,43 @@ $(document).ready(function() {
                 }
             },
             {
-                data: null,
+                data: 'actions',
+                name: 'actions',
+                orderable: false,
+                searchable: false,
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${row.SKU_Business}', '${row.Business}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${row.SKU_Business}', '${row.Business}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editProduct('${row.SKU_Business}', '${row.Business}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('${row.SKU_Business}', '${row.Business}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     `;
                 }
             }
         ],
         responsive: true,
+        order: [[0, 'asc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         language: {
-            url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/id.json'
-        },
-        pageLength: 25
+            processing: "Memuat data...",
+            lengthMenu: "Tampilkan _MENU_ data per halaman",
+            zeroRecords: "Data tidak ditemukan",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            infoFiltered: "(difilter dari _MAX_ total data)",
+            search: "Cari:",
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Selanjutnya",
+                previous: "Sebelumnya"
+            }
+        }
     });
 
     // Load filter options
