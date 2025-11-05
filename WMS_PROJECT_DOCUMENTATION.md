@@ -70,6 +70,12 @@ c:\ProjectSoftwareCWU\laravel\wms\
    - Model: MsCompany
    - Features: Company filtering, Transaction grouping
 
+5. **tgu_ms_rack_internal** ✨ **NEW**
+   - Primary Key: rack_internal_code, rack_branch (Composite)
+   - Records: Variable (rack storage locations)
+   - Model: TguMsRackInternal
+   - Features: Rack location management, Type classification (Regular/NED), Lock/unlock functionality
+
 ### Features Completed ✅ (100% COMPLETE)
 #### Core Infrastructure
 - [x] SQL Server database connection & configuration
@@ -89,6 +95,12 @@ c:\ProjectSoftwareCWU\laravel\wms\
   - Stock Summary with current levels
   - Transaction History with filtering
   - Movement History tracking
+- [x] **🆕 Rack Internal Management** (Latest Addition)
+  - Complete CRUD operations for rack locations
+  - Rack type classification (Regular/NED)
+  - Lock/unlock functionality for rack security
+  - Business and branch filtering
+  - Real-time statistics and analytics
 
 #### Business Logic
 - [x] Soft delete functionality
@@ -104,6 +116,7 @@ c:\ProjectSoftwareCWU\laravel\wms\
 - **🏢 Gudang Management**: http://127.0.0.1:8080/gudang ✅ **FULL CRUD**
 - **📦 Product Business**: http://127.0.0.1:8080/product-business ✅ **COMPLETE**
 - **📋 Inventory Management**: http://127.0.0.1:8080/inventory ✅ **NEW 3-TAB INTERFACE**
+- **🆕 Rack Internal Management**: http://127.0.0.1:8080/rack-internal ✅ **LATEST FEATURE**
 
 **Server Status**: Running on php artisan serve --port=8080
 **Performance**: Optimized for production with direct SQL queries
@@ -141,6 +154,20 @@ DELETE /api/wms/inventory/{id}            - Delete transaction
 GET    /api/wms/inventory/stock/summary   - Current stock summary by warehouse/product
 GET    /api/wms/inventory/stock/movement  - Stock movement history
 GET    /api/wms/inventory/analytics/dashboard - Real-time analytics data
+```
+
+#### 🆕 Rack Internal Management API (Latest Addition)
+```
+GET    /api/rack-internal                 - List all racks with filtering
+POST   /api/rack-internal                 - Create new rack location
+GET    /api/rack-internal/{code}/{branch} - Show specific rack details
+PUT    /api/rack-internal/{code}/{branch} - Update rack information
+DELETE /api/rack-internal/{code}/{branch} - Delete rack (soft delete)
+
+# Advanced Rack APIs
+GET    /api/rack-internal/statistics      - Rack statistics and analytics
+GET    /api/rack-internal/business/{business} - Get racks by business
+GET    /api/rack-internal/branch/{branch} - Get racks by branch/gudang
 ```
 
 ### Technologies Used
@@ -224,6 +251,13 @@ GET    /api/wms/inventory/analytics/dashboard - Real-time analytics data
 - ✅ Implemented stock summary with real-time data
 - ✅ Created transaction history with advanced filtering
 - ✅ Built movement history tracking system
+- ✅ **🆕 LATEST: Added Rack Internal Management System**
+  - Complete CRUD operations for rack locations
+  - Composite primary key support (rack_internal_code + rack_branch)
+  - Rack type classification (001=Regular, 002=NED)
+  - Lock/unlock functionality for security
+  - Advanced filtering by business, branch, and type
+  - Real-time statistics dashboard integration
 - ✅ Optimized all database queries for production performance
 - ✅ Updated all documentation to reflect production-ready status
 

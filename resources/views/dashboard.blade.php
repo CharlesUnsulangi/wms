@@ -48,12 +48,12 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Stock Movement Hari Ini
+                            Total Racks
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-racks">-</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-truck fa-2x text-gray-300"></i>
+                        <i class="fas fa-warehouse fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
@@ -66,12 +66,12 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Low Stock Alert
+                            Inventory Movements
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">0</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="total-movements">-</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        <i class="fas fa-truck fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
@@ -200,22 +200,22 @@ function loadDashboardData() {
         })
         .catch(error => console.error('Error loading product data:', error));
     
+    // Load rack internal statistics
+    fetch('/api/rack-internal/statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('total-racks').textContent = data.data.total_racks;
+            }
+        })
+        .catch(error => console.error('Error loading rack statistics:', error));
+    
     // Load inventory analytics
     fetch('/api/wms/inventory/analytics/dashboard')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Update stock movement card
-                const stockMovementCard = document.querySelector('.col-xl-3:nth-child(3) .h5');
-                if (stockMovementCard) {
-                    stockMovementCard.textContent = data.data.today_transactions;
-                }
-                
-                // Update low stock alert card
-                const lowStockCard = document.querySelector('.col-xl-3:nth-child(4) .h5');
-                if (lowStockCard) {
-                    lowStockCard.textContent = data.data.low_stock_items;
-                }
+                document.getElementById('total-movements').textContent = data.data.total_transactions;
             }
         })
         .catch(error => console.error('Error loading inventory analytics:', error));

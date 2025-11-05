@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TguMsGudangController;
 use App\Http\Controllers\TguMsProductBusinessController;
 use App\Http\Controllers\TguTrInvMainMutasiController;
+use App\Http\Controllers\TguMsRackInternalController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -27,4 +28,18 @@ Route::prefix('wms')->group(function () {
     // Custom API routes
     Route::get('gudang/business/{business}', [TguMsGudangController::class, 'getByBusiness']);
     Route::get('product-business/category/{category}', [TguMsProductBusinessController::class, 'getByCategory']);
+});
+
+// Rack Internal Management API
+Route::prefix('rack-internal')->group(function () {
+    Route::get('/', [TguMsRackInternalController::class, 'index']);
+    Route::post('/', [TguMsRackInternalController::class, 'store']);
+    Route::get('/{rackCode}/{branch}', [TguMsRackInternalController::class, 'show']);
+    Route::put('/{rackCode}/{branch}', [TguMsRackInternalController::class, 'update']);
+    Route::delete('/{rackCode}/{branch}', [TguMsRackInternalController::class, 'destroy']);
+    
+    // Additional API endpoints
+    Route::get('/statistics', [TguMsRackInternalController::class, 'statistics']);
+    Route::get('/business/{business}', [TguMsRackInternalController::class, 'getByBusiness']);
+    Route::get('/branch/{branch}', [TguMsRackInternalController::class, 'getByBranch']);
 });

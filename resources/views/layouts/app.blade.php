@@ -81,6 +81,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('rack-internal.*') ? 'active' : '' }}" href="{{ route('rack-internal.index') }}">
+                                <i class="fas fa-warehouse me-2"></i> Rack Internal
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#">
                                 <i class="fas fa-truck me-2"></i> Stock Movement
                             </a>
