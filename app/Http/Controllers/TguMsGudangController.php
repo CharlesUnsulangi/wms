@@ -35,7 +35,8 @@ class TguMsGudangController extends Controller
     private function getDataTablesData(Request $request): JsonResponse
     {
         try {
-            $query = TguMsGudang::where('rec_status', 'A');
+            // Temporary: Show all records to debug rec_status issue
+            $query = TguMsGudang::query(); // Remove rec_status filter for now
             
             // Apply filters
             if ($request->filled('business')) {
@@ -54,7 +55,7 @@ class TguMsGudangController extends Controller
             }
             
             // Get total records
-            $totalRecords = TguMsGudang::where('rec_status', 'A')->count();
+            $totalRecords = TguMsGudang::count(); // Show all records for debugging
             $filteredRecords = $query->count();
             
             // Handle ordering
