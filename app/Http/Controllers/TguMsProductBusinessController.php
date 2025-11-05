@@ -30,7 +30,8 @@ class TguMsProductBusinessController extends Controller
     private function getDataTablesData(Request $request): JsonResponse
     {
         try {
-            $query = TguMsProductBusiness::where('rec_status', 'A');
+            // Temporary: Show all records to debug rec_status issue
+            $query = TguMsProductBusiness::query(); // Remove rec_status filter for now
             
             // Apply filters
             if ($request->filled('business')) {
@@ -58,7 +59,7 @@ class TguMsProductBusinessController extends Controller
             }
             
             // Get total records before filtering
-            $totalRecords = TguMsProductBusiness::where('rec_status', 'A')->count();
+            $totalRecords = TguMsProductBusiness::count(); // Show all records for debugging
             
             // Get filtered count
             $filteredRecords = $query->count();
